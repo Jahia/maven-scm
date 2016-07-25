@@ -35,6 +35,8 @@ import org.apache.maven.scm.provider.git.gitexe.command.GitCommandLineUtils;
 import org.apache.maven.scm.provider.git.gitexe.command.changelog.GitChangeLogCommand;
 import org.apache.maven.scm.provider.git.gitexe.command.diff.GitDiffCommand;
 import org.apache.maven.scm.provider.git.gitexe.command.diff.GitDiffRawConsumer;
+import org.apache.maven.scm.provider.git.gitexe.command.status.GitStatusCommand;
+import org.apache.maven.scm.provider.git.gitexe.command.status.GitStatusConsumer;
 import org.apache.maven.scm.provider.git.repository.GitScmProviderRepository;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.codehaus.plexus.util.cli.Commandline;
@@ -78,6 +80,20 @@ public class GitUpdateCommand
         }
         String origSha1 = consumerRev.getLatestRevision();
 
+        Commandline clStatus = GitStatusCommand.createCommandLine(repository, fileSet);
+        GitStatusConsumer gitStatusConsumer = new GitStatusConsumer(getLogger(), null);
+        GitCommandLineUtils.execute( clStatus, gitStatusConsumer, stderr, getLogger() );
+        boolean hasChanges = gitStatusConsumer.getChangedFiles().size() > 0;
+
+        if (hasChanges) {
+            Commandline clStash = createStash(repository, fileSet.getBasedir());
+            exitCode = GitCommandLineUtils.execute(clStash, stdout, stderr, getLogger());
+            if (exitCode > 1) {
+                return new UpdateScmResult(clStash.toString(), "The git-stash command failed.",
+                        stderr.getOutput(), false);
+            }
+        }
+
         Commandline cl = createCommandLine( repository, fileSet.getBasedir(), scmVersion );
         exitCode = GitCommandLineUtils.execute( cl, stdout, stderr, getLogger() );
         if ( exitCode != 0 )
@@ -96,7 +112,16 @@ public class GitUpdateCommand
                     stderr.getOutput(), false );
         }
 
-        
+        if (hasChanges) {
+            Commandline clUnStash = createStashPop(repository, fileSet.getBasedir());
+            exitCode = GitCommandLineUtils.execute(clUnStash, stdout, stderr, getLogger());
+            if (exitCode > 1) {
+                return new UpdateScmResult(clUnStash.toString(), "The git-stash pop command failed.",
+                        stderr.getOutput(), false);
+            }
+        }
+
+
         // now let's get the latest version
         consumerRev = new GitLatestRevisionCommandConsumer( getLogger() );
         exitCode = GitCommandLineUtils.execute( clRev, consumerRev, stderr, getLogger() );
@@ -106,7 +131,7 @@ public class GitUpdateCommand
                                         stderr.getOutput(), false );
         }
         String latestRevision = consumerRev.getLatestRevision();
-        
+
         return new UpdateScmResultWithRevision( cl.toString(), diffRawConsumer.getChangedFiles(), latestRevision );
     }
 
@@ -126,7 +151,8 @@ public class GitUpdateCommand
                                                  ScmVersion scmVersion )
     {
         Commandline cl = GitCommandLineUtils.getBaseGitCommandLine( workingDirectory, "pull" );
-        
+
+        cl.createArg().setLine( "--rebase" );
         cl.createArg().setLine( repository.getFetchUrl() );
 
         // now set the branch where we would like to pull from
@@ -168,7 +194,29 @@ public class GitUpdateCommand
             // otherwise we work on the master branch
             cl.createArg().setValue( "master" );
         }
-        
+
+        return cl;
+    }
+
+    /**
+     * @return CommandLine for getting the latest commit on the given branch
+     */
+    public static Commandline createStash(GitScmProviderRepository repository, File workingDirectory)
+    {
+        Commandline cl = GitCommandLineUtils.getBaseGitCommandLine( workingDirectory, "stash" );
+        cl.createArg().setValue( "save" );
+
+        return cl;
+    }
+
+    /**
+     * @return CommandLine for getting the latest commit on the given branch
+     */
+    public static Commandline createStashPop(GitScmProviderRepository repository, File workingDirectory)
+    {
+        Commandline cl = GitCommandLineUtils.getBaseGitCommandLine( workingDirectory, "stash" );
+        cl.createArg().setValue( "pop" );
+
         return cl;
     }
 }
