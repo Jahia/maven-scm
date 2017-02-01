@@ -248,11 +248,11 @@
         <artifactId>maven-scm-provider-tfs</artifactId>
         <version>${project.version}</version>
       </dependency>
-      <dependency>
-        <groupId>org.apache.maven.scm</groupId>
-        <artifactId>maven-scm-provider-jazz</artifactId>
-        <version>${project.version}</version>
-      </dependency>
+      <!--<dependency>-->
+        <!--<groupId>org.apache.maven.scm</groupId>-->
+        <!--<artifactId>maven-scm-provider-jazz</artifactId>-->
+        <!--<version>${project.version}</version>-->
+      <!--</dependency>-->
       <!-- end providers declaration -->
 
       <!-- Plexus -->
@@ -555,10 +555,10 @@
                   <title>MKS Integrity Provider</title>
                   <packages>org.apache.maven.scm.provider.integrity*</packages>
                 </group>
-                <group>
-                  <title>Jazz/Rational Team Concert Provider</title>
-                  <packages>org.apache.maven.scm.provider.jazz*</packages>
-                </group>
+                <!--<group>-->
+                  <!--<title>Jazz/Rational Team Concert Provider</title>-->
+                  <!--<packages>org.apache.maven.scm.provider.jazz*</packages>-->
+                <!--</group>-->
                 <group>
                   <title>Local Provider</title>
                   <packages>org.apache.maven.scm.provider.local*</packages>
